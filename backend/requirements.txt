@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+scipy
+scikit-learn
+google-generativeai
+python-multipart
+pydantic
+pydantic-settings
+python-dotenv
+ollama
+requests
+beautifulsoup4
+lxml
+pytz
