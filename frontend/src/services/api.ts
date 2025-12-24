@@ -82,15 +82,36 @@ export const fetchFlights = async (bbox?: string): Promise<Flight[]> => {
             ? `http://localhost:8000/api/flights/?bbox=${bbox}`
             : `http://localhost:8000/api/flights/`;
 
-        const response = await fetch(url);
+        // 500ms timeout to detect if backend is down (local dev vs github pages)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
         const data = await response.json();
         return data.flights;
     } catch (error) {
-        console.error("Error fetching flights:", error);
-        return [];
+        console.warn("Backend unreachable, switching to DEMO MODE (Mock Data)", error);
+
+        // Fallback to static mock data for GitHub Pages / Demo
+        // Note: In production build, base path might affect this, but public/ file is usually at root
+        // leveraging Vite's import.meta.env.BASE_URL if needed, but relative path usually works
+        try {
+            // For GitHub Pages, we need to respect the base path if fetching relative
+            const mockUrl = import.meta.env.BASE_URL + 'mock_data.json';
+            const demoRes = await fetch(mockUrl.replace('//', '/')); // simple cleanup
+            const demoData = await demoRes.json();
+
+            // Transform mock data if wrapped
+            return demoData.flights || demoData;
+        } catch (mockErr) {
+            console.error("Failed to load demo data", mockErr);
+            return [];
+        }
     }
 };
 
