@@ -2,7 +2,14 @@
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)
+
 ![Status](https://img.shields.io/badge/status-active-success.svg?style=for-the-badge)
+
+<p align="center">
+  <img src="assets/demo-1.png" width="45%" alt="Radar View" />
+  <img src="assets/demo-2.png" width="45%" alt="Cloud View" />
+</p>
+
 
 A modern, real-time flight tracking application built with passion. Visualize air traffic, weather conditions, and aircraft details in a beautiful, responsive interface.
 
