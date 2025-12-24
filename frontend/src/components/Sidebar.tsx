@@ -3,20 +3,25 @@
  * @author Umberto Casa
  */
 import React, { useEffect, useState } from 'react';
-import { X, Plane, Share2, MoreHorizontal, Gauge, ArrowUp, AlertCircle } from 'lucide-react';
-import type { Flight, FlightDetail } from '../services/api';
-import { fetchFlightDetails } from '../services/api';
+import { X, Plane, Share2, MoreHorizontal, Gauge, ArrowUp, Bell, Star, Copy, CloudRain } from 'lucide-react';
+import type { Flight, FlightDetail, WeatherData } from '../services/api';
+import { fetchFlightDetails, fetchWeather } from '../services/api';
 
 interface SidebarProps {
     flight: Flight | null;
     onClose: () => void;
     useMetric: boolean;
+    onShowLegal: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ flight, onClose, useMetric }) => {
+const Sidebar: React.FC<SidebarProps> = ({ flight, onClose, useMetric, onShowLegal }) => {
     const [details, setDetails] = useState<FlightDetail | null>(null);
     const [loading, setLoading] = useState(false);
     const [show3D, setShow3D] = useState(false);
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
+
+    const [originWeather, setOriginWeather] = useState<WeatherData | null>(null);
+    const [destWeather, setDestWeather] = useState<WeatherData | null>(null);
 
     // Helper for units
     const formatAlt = (val: number) => useMetric ? `${Math.round(val)} m` : `${Math.round(val * 3.28084)} ft`;
@@ -25,14 +30,39 @@ const Sidebar: React.FC<SidebarProps> = ({ flight, onClose, useMetric }) => {
 
     useEffect(() => {
         setDetails(null);
+        setOriginWeather(null);
+        setDestWeather(null);
+        setShowMoreMenu(false); // Reset menu on new flight
         if (flight) {
             setLoading(true);
             fetchFlightDetails(flight.icao24, flight.callsign || "")
-                .then(data => setDetails(data))
+                .then(async data => {
+                    setDetails(data);
+
+                    // Fetch Weather if schedule exists
+                    if (data.schedule) {
+                        if (data.schedule.origin.coords) {
+                            const w = await fetchWeather(data.schedule.origin.coords[0], data.schedule.origin.coords[1]);
+                            if (w) setOriginWeather({ ...w, city: data.schedule.origin.city });
+                        }
+                        if (data.schedule.destination.coords) {
+                            const w = await fetchWeather(data.schedule.destination.coords[0], data.schedule.destination.coords[1]);
+                            if (w) setDestWeather({ ...w, city: data.schedule.destination.city });
+                        }
+                    }
+                })
                 .catch(err => console.error(err))
                 .finally(() => setLoading(false));
         }
     }, [flight]);
+
+    const handleCopyLink = () => {
+        const link = window.location.href; // In real app, build specific URL
+        navigator.clipboard.writeText(link);
+        setShowMoreMenu(false);
+        // Could add toast here
+        alert("Flight link copied to clipboard!");
+    };
 
     if (!flight) return null;
 
@@ -77,7 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({ flight, onClose, useMetric }) => {
             </div>
 
             {/* Flight Info Actions */}
-            <div className="flex justify-around py-3 border-b border-gray-700 bg-[#333]">
+            <div className="flex justify-around py-3 border-b border-gray-700 bg-[#333] relative">
                 <button className="flex flex-col items-center text-xs text-gray-400 hover:text-fr24-yellow transition-colors">
                     <Share2 size={18} className="mb-1" />
                     Share
@@ -89,10 +119,28 @@ const Sidebar: React.FC<SidebarProps> = ({ flight, onClose, useMetric }) => {
                     <Plane size={18} className="mb-1" />
                     3D View
                 </button>
-                <button className="flex flex-col items-center text-xs text-gray-400 hover:text-fr24-yellow transition-colors">
+                <button
+                    onClick={() => setShowMoreMenu(!showMoreMenu)}
+                    className={`flex flex-col items-center text-xs transition-colors ${showMoreMenu ? 'text-fr24-yellow' : 'text-gray-400 hover:text-fr24-yellow'}`}
+                >
                     <MoreHorizontal size={18} className="mb-1" />
                     More
                 </button>
+
+                {/* Dropdown Menu */}
+                {showMoreMenu && (
+                    <div className="absolute top-14 right-2 w-48 bg-[#2a2a2a] border border-gray-600 rounded-lg shadow-2xl z-50 text-white overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <button onClick={handleCopyLink} className="w-full text-left px-4 py-3 hover:bg-[#3a3a3a] text-sm flex items-center gap-3 border-b border-gray-700">
+                            <Copy size={16} className="text-gray-400" /> Copy Permalink
+                        </button>
+                        <button onClick={() => setShowMoreMenu(false)} className="w-full text-left px-4 py-3 hover:bg-[#3a3a3a] text-sm flex items-center gap-3 border-b border-gray-700">
+                            <Bell size={16} className="text-gray-400" /> Flight Alerts
+                        </button>
+                        <button onClick={() => setShowMoreMenu(false)} className="w-full text-left px-4 py-3 hover:bg-[#3a3a3a] text-sm flex items-center gap-3">
+                            <Star size={16} className="text-fr24-yellow" /> Add to Fly Fleet
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Main Content */}
@@ -113,6 +161,12 @@ const Sidebar: React.FC<SidebarProps> = ({ flight, onClose, useMetric }) => {
                             <div className="flex-1">
                                 <div className="text-3xl font-bold text-white">{details.schedule.origin.code}</div>
                                 <div className="text-xs text-gray-400">{details.schedule.origin.city}</div>
+                                {originWeather && (
+                                    <div className="text-xs text-teal-400 flex items-center justify-center gap-1 mt-1">
+                                        <CloudRain size={10} />
+                                        {originWeather.temperature}°C
+                                    </div>
+                                )}
                                 <div className="text-sm font-mono mt-1 text-gray-300">
                                     {new Date(details.schedule.scheduled_departure).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
@@ -129,6 +183,12 @@ const Sidebar: React.FC<SidebarProps> = ({ flight, onClose, useMetric }) => {
                             <div className="flex-1">
                                 <div className="text-3xl font-bold text-white">{details.schedule.destination.code}</div>
                                 <div className="text-xs text-gray-400">{details.schedule.destination.city}</div>
+                                {destWeather && (
+                                    <div className="text-xs text-teal-400 flex items-center justify-center gap-1 mt-1">
+                                        <CloudRain size={10} />
+                                        {destWeather.temperature}°C
+                                    </div>
+                                )}
                                 <div className="text-sm font-mono mt-1 text-gray-300">
                                     {new Date(details.schedule.scheduled_arrival).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
@@ -198,16 +258,11 @@ const Sidebar: React.FC<SidebarProps> = ({ flight, onClose, useMetric }) => {
                     </div>
                 </div>
 
-                {/* Premium Banner */}
-                <div className="bg-gradient-to-r from-[#dfa322] to-[#b8860b] p-4 rounded-lg text-white text-center shadow-lg transform hover:scale-[1.02] transition-transform cursor-pointer">
-                    <h3 className="font-bold text-lg mb-1 flex items-center justify-center gap-2">
-                        <AlertCircle size={20} />
-                        Upgrade to Gold
-                    </h3>
-                    <p className="text-xs opacity-90 mb-3">Get 365 days of flight history, weather layers & no ads.</p>
-                    <button className="bg-black/20 backdrop-blur-sm border border-white/30 text-white px-6 py-2 rounded-full text-xs font-bold uppercase hover:bg-black/40 transition-colors">
-                        Start Free Trial
-                    </button>
+                {/* Free / Legal Notice */}
+                <div onClick={onShowLegal} className="p-4 rounded-lg border border-gray-800 bg-gray-900 text-center cursor-pointer hover:bg-gray-800 transition-colors">
+                    <CloudRain size={24} className="mx-auto text-gray-600 mb-2" />
+                    <p className="text-xs text-gray-500 mb-2">Weather data provided by Open-Meteo & RainViewer.</p>
+                    <span className="text-[10px] text-fr24-yellow underline">Legal Disclaimer</span>
                 </div>
 
             </div>

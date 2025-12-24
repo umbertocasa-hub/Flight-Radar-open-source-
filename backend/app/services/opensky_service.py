@@ -64,7 +64,46 @@ class OpenSkyService:
 
         except requests.RequestException as e:
             print(f"Error fetching data from OpenSky: {e}")
-            return []
+            # print("Falling back to mock traffic data...")
+            # return self.generate_mock_traffic(bbox)
+            return [] # Strict Real Data Only
+
+    def generate_mock_traffic(self, bbox: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Generates realistic random traffic for demo purposes when API is unavailable.
+        """
+        import random
+        flights = []
+        
+        # Default bounds (Europe-ish) if not provided
+        lamin, lomin, lamax, lomax = 35.0, 6.0, 47.0, 19.0
+        if bbox:
+            try:
+                lamin, lomin, lamax, lomax = map(float, bbox.split(','))
+            except:
+                pass
+
+        # Generate ~150 flights
+        count = 150
+        for _ in range(count):
+            lat = random.uniform(lamin, lamax)
+            lon = random.uniform(lomin, lomax)
+            track = random.uniform(0, 360)
+            
+            flights.append({
+                "icao24": f"aa{random.randint(1000,9999)}",
+                "callsign": f"MOCK{random.randint(10,99)}",
+                "origin_country": "System Demo",
+                "longitude": lon,
+                "latitude": lat,
+                "baro_altitude": random.randint(1000, 35000),
+                "on_ground": False,
+                "velocity": random.uniform(200, 500),
+                "true_track": track,
+                "vertical_rate": 0,
+                "geo_altitude": random.randint(1000, 35000)
+            })
+        return flights
 
     def get_flight_details(self, icao24: str):
         # OpenSky free API doesn't have a direct "details" endpoint for a specific live flight 

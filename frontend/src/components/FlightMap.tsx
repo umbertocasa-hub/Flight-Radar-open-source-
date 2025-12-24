@@ -32,15 +32,23 @@ const FlightMap: React.FC<FlightMapProps> = ({ selectedFlight, onSelectFlight, s
     const [flights, setFlights] = useState<Flight[]>([]);
     const [filteredFlights, setFilteredFlights] = useState<Flight[]>([]);
     const [loading, setLoading] = useState(true);
+    const [weatherUrl, setWeatherUrl] = useState<string | null>(null);
     const timerRef = useRef<number | undefined>(undefined);
 
     const loadData = async () => {
         try {
-            // Italy BBox: min_lat,min_lon,max_lat,max_lon
-            // 35.0, 6.0, 47.0, 19.0
-            // We can widen this if we want more "Europe" feel
-            const data = await fetchFlights("35.0,6.0,47.0,19.0");
-            setFlights(data);
+            // Central Europe BBox: min_lat,min_lon,max_lat,max_lon
+            // Covers Italy, France, Germany, etc. to ensure visibility
+            const data = await fetchFlights("35.0,-10.0,55.0,25.0");
+
+            // Deduplicate flights and ensure valid data
+            const uniqueFlights = new Map();
+            data.forEach(f => {
+                if (f.icao24 && f.latitude && f.longitude) {
+                    uniqueFlights.set(f.icao24, f);
+                }
+            });
+            setFlights(Array.from(uniqueFlights.values()));
         } catch (error) {
             console.error("Failed to fetch flights", error);
         } finally {
@@ -63,16 +71,62 @@ const FlightMap: React.FC<FlightMapProps> = ({ selectedFlight, onSelectFlight, s
         setFilteredFlights(filtered);
     }, [flights, settings.filters]);
 
+    // Weather Animation State
+    const [weatherFrames, setWeatherFrames] = useState<any[]>([]);
+    const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
+
     useEffect(() => {
         loadData();
-        // Poll every 5 seconds for smoother updates
-        // Use window.setInterval to avoid NodeJS timer type conflict
-        timerRef.current = window.setInterval(loadData, 5000);
+        timerRef.current = window.setInterval(loadData, 10000);
+
+        // Fetch Weather Data from RainViewer
+        const fetchWeather = async () => {
+            try {
+                const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+                const data = await res.json();
+
+                if (data.host && data.radar && data.radar.past && data.radar.past.length > 0) {
+                    // Combine past + nowcast if available, or just past
+                    // We need to store standard URL parts: host + path
+                    const frames = data.radar.past;
+                    // Add "nowcast" if desired: data.radar.nowcast
+
+                    const frameData = frames.map((f: any) => ({
+                        url: `${data.host}${f.path}`,
+                        time: f.time
+                    }));
+
+                    setWeatherFrames(frameData);
+                    // Start at the last frame (most recent) initially
+                    setCurrentFrameIndex(frameData.length - 1);
+                    setWeatherUrl(frameData[frameData.length - 1].url);
+                }
+            } catch (err) {
+                console.error("Failed to fetch weather configuration", err);
+            }
+        };
+        fetchWeather();
 
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
     }, []);
+
+    // Animation Loop
+    useEffect(() => {
+        if (weatherFrames.length === 0) return;
+        if (settings.weatherLayer === 'none') return;
+
+        const interval = setInterval(() => {
+            setCurrentFrameIndex(prev => {
+                const next = (prev + 1) % weatherFrames.length;
+                setWeatherUrl(weatherFrames[next].url);
+                return next;
+            });
+        }, 2000); // Change frame every 2 seconds (avoid rate limit)
+
+        return () => clearInterval(interval);
+    }, [weatherFrames, settings.weatherLayer]);
 
     // Map Layer Selection
     const getTileUrl = () => {
@@ -105,11 +159,21 @@ const FlightMap: React.FC<FlightMapProps> = ({ selectedFlight, onSelectFlight, s
                     url={getTileUrl()}
                 />
 
-                {/* Weather Overlay (OpenWeatherMap Precipitation) */}
-                {settings.showWeather && (
+                {/* Weather Overlay (RainViewer) */}
+                {settings.weatherLayer === 'radar' && weatherUrl && (
                     <TileLayer
-                        url="https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=8db25712530114008272f23240b271d4"
-                        opacity={0.6}
+                        url={`${weatherUrl}/256/{z}/{x}/{y}/2/1_1.png`}
+                        opacity={0.8}
+                        zIndex={500}
+                        attribution='Weather data © <a href="https://www.rainviewer.com">RainViewer</a>'
+                    />
+                )}
+                {settings.weatherLayer === 'satellite' && weatherUrl && (
+                    <TileLayer
+                        url={`${weatherUrl}/256/{z}/{x}/{y}/0/1_1.png`} // '0' is usually Satellite/Infrared
+                        opacity={0.7}
+                        zIndex={500}
+                        attribution='Weather data © <a href="https://www.rainviewer.com">RainViewer</a>'
                     />
                 )}
 
@@ -152,10 +216,9 @@ const FlightMap: React.FC<FlightMapProps> = ({ selectedFlight, onSelectFlight, s
                     );
                 })}
 
-                {/* Airports Layers - Only show at higher zooms? Or always */}
-                {['FCO', 'MXP', 'LIN', 'VCE', 'LHR', 'CDG'].map((code) => {
-                    // Mock positions
-                    const positions: Record<string, [number, number]> = {
+                {/* Airports Layers */}
+                {(() => {
+                    const positions: { [key: string]: [number, number] } = {
                         'FCO': [41.8003, 12.2389],
                         'MXP': [45.6301, 8.7255],
                         'LIN': [45.4451, 9.2767],
@@ -164,14 +227,20 @@ const FlightMap: React.FC<FlightMapProps> = ({ selectedFlight, onSelectFlight, s
                         'CDG': [49.0097, 2.5479]
                     };
 
-                    return (
+                    return ['FCO', 'MXP', 'LIN', 'VCE', 'LHR', 'CDG'].map((code) => (
                         <Marker
                             key={code}
                             position={positions[code]}
                             icon={L.divIcon({
-                                html: `<div class="bg-blue-600 w-3 h-3 rounded-full border-2 border-white shadow-lg"></div>`,
-                                className: 'airport-dot',
-                                iconSize: [12, 12]
+                                html: `
+                                    <div class="flex flex-col items-center justify-center transform -translate-x-1/2 -translate-y-1/2">
+                                        <div class="bg-blue-600 w-3 h-3 rounded-full border-2 border-white shadow-lg relative z-10"></div>
+                                        <span class="mt-1 text-[10px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-md shadow-md transform scale-75 whitespace-nowrap border border-white/10">${code}</span>
+                                    </div>
+                                `,
+                                className: 'airport-marker-custom',
+                                iconSize: [40, 40], // Increased size for label
+                                iconAnchor: [20, 20] // Center anchor
                             })}
                         >
                             <Popup className="airport-popup">
@@ -185,16 +254,16 @@ const FlightMap: React.FC<FlightMapProps> = ({ selectedFlight, onSelectFlight, s
                                 </div>
                             </Popup>
                         </Marker>
-                    )
-                })}
-            </MapContainer>
+                    ))
+                })()}
+            </MapContainer >
 
             {/* Stats overlay */}
-            <div className="absolute top-4 left-4 z-[999] bg-black/60 backdrop-blur-sm p-3 rounded-md text-white border border-gray-700">
+            < div className="absolute top-4 left-4 z-[999] bg-black/60 backdrop-blur-sm p-3 rounded-md text-white border border-gray-700" >
                 <div className="text-xs text-gray-400 font-bold uppercase">Flights in Range</div>
                 <div className="text-2xl font-mono text-fr24-yellow">{filteredFlights.length} <span className="text-sm text-gray-500">/ {flights.length}</span></div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

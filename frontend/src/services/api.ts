@@ -43,8 +43,8 @@ export interface FlightDetail {
         photographer?: string;
     };
     schedule?: {
-        origin: { code: string; city: string };
-        destination: { code: string; city: string };
+        origin: { code: string; city: string; coords: [number, number] };
+        destination: { code: string; city: string; coords: [number, number] };
         scheduled_departure: string;
         scheduled_arrival: string;
         status: string;
@@ -52,6 +52,29 @@ export interface FlightDetail {
         progress_percent: number;
     };
 }
+
+export interface WeatherData {
+    temperature: number;
+    weathercode: number;
+    city: string;
+}
+
+export const fetchWeather = async (lat: number, lon: number): Promise<WeatherData | null> => {
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const data = await res.json();
+        return {
+            temperature: data.current_weather.temperature,
+            weathercode: data.current_weather.weathercode,
+            city: "" // to be filled by caller context
+        };
+    } catch (e) {
+        console.error("Weather fetch failed", e);
+        return null;
+    }
+};
 
 export const fetchFlights = async (bbox?: string): Promise<Flight[]> => {
     try {
@@ -71,9 +94,13 @@ export const fetchFlights = async (bbox?: string): Promise<Flight[]> => {
     }
 };
 
-export const fetchFlightDetails = async (icao24: string, callsign: string): Promise<FlightDetail> => {
+export const fetchFlightDetails = async (icao24: string, callsign: string, id?: string): Promise<FlightDetail> => {
     try {
-        const response = await fetch(`http://localhost:8000/api/flights/${icao24}?callsign=${callsign}`);
+        let url = `http://localhost:8000/api/flights/${icao24}?callsign=${callsign}`;
+        if (id) {
+            url += `&id=${id}`;
+        }
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }

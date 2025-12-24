@@ -7,7 +7,7 @@ import { CloudRain, Ruler, Filter, Moon, Sun, Globe } from 'lucide-react';
 
 export interface AppSettings {
     mapStyle: 'dark' | 'light' | 'satellite';
-    showWeather: boolean;
+    weatherLayer: 'none' | 'radar' | 'satellite';
     useMetric: boolean;
     filters: {
         minAltitude: number;
@@ -15,12 +15,14 @@ export interface AppSettings {
     };
 }
 
+// ... props
 interface ControlsProps {
     settings: AppSettings;
     onUpdate: (newSettings: AppSettings) => void;
+    onShowLegal: () => void;
 }
 
-const Controls: React.FC<ControlsProps> = ({ settings, onUpdate }) => {
+const Controls: React.FC<ControlsProps> = ({ settings, onUpdate, onShowLegal }) => {
 
     const update = (key: keyof AppSettings, value: any) => {
         onUpdate({ ...settings, [key]: value });
@@ -33,41 +35,35 @@ const Controls: React.FC<ControlsProps> = ({ settings, onUpdate }) => {
     return (
         <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2 pointer-events-none">
             {/* Map Style Toggle */}
-            <div className="bg-black/80 backdrop-blur-md p-2 rounded-lg border border-gray-700 pointer-events-auto flex gap-2 shadow-xl">
-                <button
-                    onClick={() => update('mapStyle', 'dark')}
-                    className={`p-2 rounded hover:bg-white/10 ${settings.mapStyle === 'dark' ? 'text-fr24-yellow bg-white/10' : 'text-gray-400'}`}
-                    title="Dark Mode"
-                >
-                    <Moon size={20} />
-                </button>
-                <button
-                    onClick={() => update('mapStyle', 'light')}
-                    className={`p-2 rounded hover:bg-white/10 ${settings.mapStyle === 'light' ? 'text-fr24-yellow bg-white/10' : 'text-gray-400'}`}
-                    title="Light Mode"
-                >
-                    <Sun size={20} />
-                </button>
-                <button
-                    onClick={() => update('mapStyle', 'satellite')}
-                    className={`p-2 rounded hover:bg-white/10 ${settings.mapStyle === 'satellite' ? 'text-fr24-yellow bg-white/10' : 'text-gray-400'}`}
-                    title="Satellite"
-                >
-                    <Globe size={20} />
-                </button>
-            </div>
+            {/* ... */}
 
             {/* Toggles */}
             <div className="bg-black/80 backdrop-blur-md p-2 rounded-lg border border-gray-700 pointer-events-auto flex flex-col gap-2 shadow-xl w-48">
 
-                <div className="flex items-center justify-between text-white text-sm">
-                    <div className="flex items-center gap-2">
-                        <CloudRain size={16} className="text-blue-400" /> Weather
+                <div className="flex flex-col gap-1 text-white text-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                        <CloudRain size={16} className="text-blue-400" /> Weather Layer
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked={settings.showWeather} onChange={(e) => update('showWeather', e.target.checked)} className="sr-only peer" />
-                        <div className="w-9 h-5 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
+                    <div className="flex bg-gray-700 rounded p-0.5">
+                        <button
+                            onClick={() => update('weatherLayer', 'none')}
+                            className={`flex-1 text-[10px] uppercase py-1 rounded ${settings.weatherLayer === 'none' ? 'bg-gray-500 text-white' : 'hover:bg-gray-600 text-gray-400'}`}
+                        >
+                            None
+                        </button>
+                        <button
+                            onClick={() => update('weatherLayer', 'radar')}
+                            className={`flex-1 text-[10px] uppercase py-1 rounded ${settings.weatherLayer === 'radar' ? 'bg-blue-600 text-white' : 'hover:bg-gray-600 text-gray-400'}`}
+                        >
+                            Radar
+                        </button>
+                        <button
+                            onClick={() => update('weatherLayer', 'satellite')}
+                            className={`flex-1 text-[10px] uppercase py-1 rounded ${settings.weatherLayer === 'satellite' ? 'bg-purple-600 text-white' : 'hover:bg-gray-600 text-gray-400'}`}
+                        >
+                            Cloud
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex items-center justify-between text-white text-sm">
@@ -110,6 +106,12 @@ const Controls: React.FC<ControlsProps> = ({ settings, onUpdate }) => {
                         onChange={(e) => updateFilter('airline', e.target.value.toUpperCase())}
                         className="w-full bg-black/50 border border-gray-600 rounded px-2 py-1 text-white text-sm focus:border-fr24-yellow outline-none uppercase"
                     />
+                </div>
+
+                <div className="pt-2 border-t border-gray-600">
+                    <button onClick={onShowLegal} className="text-xs text-gray-500 hover:text-white underline w-full text-center">
+                        Legal & Disclaimer
+                    </button>
                 </div>
             </div>
         </div>
