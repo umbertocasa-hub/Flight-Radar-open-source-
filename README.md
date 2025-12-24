@@ -1,56 +1,75 @@
-# Flight Tracker Pro ✈️
-**Author:** Umberto Casa
-**License:** Open Source (Unlicense / MIT - Do whatever you want)
+# ✈️ Flight Tracker Pro
 
-Flight Tracker Pro is a modern, real-time flight tracking application inspired by FlightRadar24. It visualizes live air traffic using a modern tech stack and provides detailed flight information, including simulated schedules and 3D cockpit views.
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg?style=for-the-badge)
+![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-active-success.svg?style=for-the-badge)
 
-![Demo](https://via.placeholder.com/800x400.png?text=Flight+Tracker+Pro+Demo)
+A modern, real-time flight tracking application built with passion. Visualize air traffic, weather conditions, and aircraft details in a beautiful, responsive interface.
 
-## 🚀 Features
+## 🛠️ Tech Stack
 
-*   **Real-time Tracking**: Live aircraft positions on an interactive map.
-*   **Detailed Flight Data**: Speed, altitude, vertical rate, and origin/destination (simulated for commercial flights).
-*   **Real Imagery**: Fetches actual aircraft photos using the Planespotters.net API.
-*   **Pro Features**:
-    *   **3D Cockpit View**: Simulated pilot perspective.
-    *   **Emergency Alerts**: Visual highlighting for Squawk 7700 (Emergency) aircraft.
-    *   **Weather Layers**: Real-time precipitation radar overlay.
-    *   **Filters**: Filter by altitude or airline.
-    *   **Map Styles**: Switch between Dark, Light, and Satellite views.
+### Frontend
+![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Leaflet](https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=Leaflet&logoColor=white)
 
-## 🛠️ Architecture
+### Backend
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 
-The project is containerized using Docker and consists of:
+### APIs & Services
+![FlightRadar24](https://img.shields.io/badge/FlightRadar24-Unofficial-yellow?style=for-the-badge)
+![RainViewer](https://img.shields.io/badge/RainViewer-Weather-blue?style=for-the-badge)
+![Open-Meteo](https://img.shields.io/badge/Open--Meteo-Weather-orange?style=for-the-badge)
+![OpenStreetMap](https://img.shields.io/badge/OpenStreetMap-Map-green?style=for-the-badge)
 
-*   **Frontend**: React (Vite) + TailwindCSS + Leaflet (Map).
-*   **Backend**: Python FastAPI.
-    *   **Data Sources**: OpenSky Network (ADS-B Data), Planespotters.net (Images), OpenWeatherMap (Tiles).
-    *   **Logic**: Data aggregation, commercial flight simulation (mock schedules), and caching.
+## ✨ key Features
 
-## 📦 Installation
+-   **Real-Time Tracking**: Watch aircraft move in real-time across the map.
+-   **Live Weather**: Animated Radar and Satellite layers to see clouds and precipitation.
+-   **Accurate Details**: Click on any flight to see the *actual* aircraft photo and detailed schedule.
+-   **Cockpit View**: Simulated view from the aircraft's perspective.
+-   **Filters**: Filter by altitude or airline to find exactly what you're looking for.
 
-This project is designed to run with Docker Compose.
+## � Getting Started
 
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/YourUsername/flight-tracker.git
-    cd flight-tracker
-    ```
+### Prerequisites
+-   Docker & Docker Compose
+-   Node.js 20+ (for local frontend dev)
+-   Python 3.10+ (for local backend dev)
 
-2.  **Start the application**:
-    ```bash
-    docker-compose up --build
-    ```
+### Quick Start (Docker)
+The easiest way to run the full stack:
 
-3.  **Access**:
-    *   **Frontend**: [http://localhost:5173](http://localhost:5173)
-    *   **Backend API**: [http://localhost:8000/docs](http://localhost:8000/docs)
+```bash
+docker-compose up -d --build
+```
 
-## 🔧 APIs & Credits
+Access the app at `http://localhost:5173`.
 
-*   **OpenSky Network**: For providing free academic access to live ADS-B data.
-*   **Planespotters.net**: For the extensive database of aircraft photography.
-*   **OpenWeatherMap**: For weather tile layers.
+### Local Development
+
+**Backend**
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Frontend**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## ⚠️ Disclaimer
+This project is for **educational purposes only**. It uses unofficial APIs which may change or be restricted at any time. Do not use for safety-critical applications.
 
 ---
-*Built with ❤️ by Umberto Casa.*
+Made with ❤️ by [Umberto Casa](https://github.com/umbertocasa-hub)
